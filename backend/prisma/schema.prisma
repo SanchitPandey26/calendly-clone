@@ -1,0 +1,67 @@
+// ─── Datasource & Generator ─────────────────────────────────────────
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ─── Enums ──────────────────────────────────────────────────────────
+
+enum DayOfWeek {
+  SUNDAY
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+}
+
+enum BookingStatus {
+  SCHEDULED
+  CANCELLED
+}
+
+// ─── Models ─────────────────────────────────────────────────────────
+
+model EventType {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  slug      String   @unique
+  duration  Int      // duration in minutes
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  bookings Booking[]
+}
+
+model Availability {
+  id        String   @id @default(uuid()) @db.Uuid
+  dayOfWeek DayOfWeek
+  startTime String                  // "HH:mm" format, e.g. "09:00"
+  endTime   String                  // "HH:mm" format, e.g. "17:00"
+  timezone  String                  // IANA timezone, e.g. "America/New_York"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Booking {
+  id           String        @id @default(uuid()) @db.Uuid
+  eventTypeId  String        @db.Uuid
+  inviteeName  String
+  inviteeEmail String
+  date         DateTime
+  startTime    DateTime
+  endTime      DateTime
+  status       BookingStatus @default(SCHEDULED)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  eventType EventType @relation(fields: [eventTypeId], references: [id], onDelete: Cascade)
+
+  @@index([date])
+}
