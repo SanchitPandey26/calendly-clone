@@ -2,7 +2,7 @@
 
 The user interface for the Calendly Clone, built with **Next.js** and **React**.
 
-## 🏗 Architecture
+## Architecture
 
 The frontend leverages the **Next.js App Router** and a modular component structure to provide a fast, responsive user experience.
 
@@ -23,13 +23,13 @@ The frontend leverages the **Next.js App Router** and a modular component struct
   - **`/hooks`**: Custom React hooks for global state like Toasts and media queries.
   - **`/utils`**: Business logic helpers, including the critical `timezoneUtils.ts`.
 
-## 🔄 Control Flow
+## Control Flow
 
 1. **State Management**: Uses React hooks (`useState`, `useEffect`) and Context API for managing event and session data.
 2. **Navigation**: Facilitated by `next/navigation` for fast client-side transitions.
 3. **Data Fetching**: Performed in Client Components using Axios services, with systematic error handling and toast notifications.
 
-## 🌍 Timezone Management
+## Timezone Management
 
 One of the project's most complex systems is located in `frontend/utils/timezoneUtils.ts`. It works by:
 
@@ -37,7 +37,7 @@ One of the project's most complex systems is located in `frontend/utils/timezone
 - Dynamically shifting slot times when a user selects a different timezone from the UI dropdown.
 - Calculating "isToday" and "isPast" relative to the **selected** timezone, not the guest's browser clock.
 
-## 🛠 Tech Stack
+## Tech Stack
 
 - **Framework**: Next.js 15+
 - **Library**: React 19
@@ -45,13 +45,13 @@ One of the project's most complex systems is located in `frontend/utils/timezone
 - **Icons**: Lucide React
 - **API Client**: Axios
 
-## 🧪 Development
+## Development
 
 - **Run in dev mode**: `npm run dev`
 - **Build**: `npm run build`
 - **Lint**: `npm run lint`
 
-## 🎨 Premium UI Features
+## Premium UI Features
 
 - **Responsive Sidebar**: Automatically collapses on tablets/phones and expands on desktops to maximize workspace.
 - **Custom Delete Modals**: Replaces native alerts with themed confirmation boxes.
