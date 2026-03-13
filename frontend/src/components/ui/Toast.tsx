@@ -11,7 +11,7 @@ export interface ToastData {
 
 export function ToastContainer({ toasts, removeToast }: { toasts: ToastData[]; removeToast: (id: string) => void }) {
   return (
-    <div className="fixed top-6 left-0 right-0 flex flex-col items-center gap-2 z-[100] pointer-events-none">
+    <div className="fixed top-6 left-0 right-0 flex flex-col items-center gap-2 z-100 pointer-events-none">
       {toasts.map(toast => (
         <ToastItem key={toast.id} toast={toast} onClose={() => removeToast(toast.id)} />
       ))}

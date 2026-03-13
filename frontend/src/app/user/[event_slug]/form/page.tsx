@@ -9,14 +9,14 @@ import { getAvailability } from '@/services/availability';
 import { ToastContainer } from '@/components/ui/Toast';
 import { useToast, getErrorMessage } from '@/hooks/useToast';
 import PoweredByRibbon from '@/components/ui/PoweredByRibbon';
-import { formatTimeInTimezone } from '@/utils/timezoneUtils';
+import { formatTimeInTimezone } from '@/src/utils/timezoneUtils';
 
 export default function BookingFormPage() {
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
   const eventSlug = params.event_slug as string;
-  
+
   const dateStr = searchParams.get('date');
   const startTime = searchParams.get('startTime');
   const endTime = searchParams.get('endTime');
@@ -72,7 +72,7 @@ export default function BookingFormPage() {
   const formatDateTime = () => {
     if (!startTime || !endTime) return '';
     const startDate = new Date(startTime);
-    
+
     const startFormatted = formatTimeInTimezone(startTime, availTzId, selectedTzId);
     const endFormatted = formatTimeInTimezone(endTime, availTzId, selectedTzId);
 
@@ -82,7 +82,7 @@ export default function BookingFormPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validate
     const errors: { name?: string; email?: string } = {};
     if (!name.trim()) errors.name = 'Name is required.';
@@ -93,7 +93,7 @@ export default function BookingFormPage() {
       return;
     }
     setFormErrors({});
-    
+
     if (!eventType) return;
     setLoading(true);
     try {
@@ -131,7 +131,7 @@ export default function BookingFormPage() {
         </button>
         <div className="text-gray-500 font-medium mb-1">Sanchit Pandey</div>
         <h1 className="text-[28px] font-bold text-gray-900 mb-6">{loadingEvent ? '...' : eventType?.name}</h1>
-        
+
         <div className="flex items-center gap-3 text-gray-600 mb-4 font-medium">
           <Clock size={20} />
           <span>{loadingEvent ? '--' : eventType?.duration} min</span>
@@ -155,12 +155,12 @@ export default function BookingFormPage() {
       {/* Right Panel */}
       <div className="p-8 flex-1">
         <h2 className="text-[20px] font-bold text-gray-900 mb-6">Enter Details</h2>
-        
+
         <form onSubmit={handleSubmit} className="max-w-[400px]">
           <div className="mb-4">
             <label className="block text-[14px] font-bold text-gray-900 mb-2">Name *</label>
-            <input 
-              type="text" 
+            <input
+              type="text"
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -168,11 +168,11 @@ export default function BookingFormPage() {
             />
             {formErrors.name && <p className="text-[13px] text-red-500 mt-1">{formErrors.name}</p>}
           </div>
-          
+
           <div className="mb-4">
             <label className="block text-[14px] font-bold text-gray-900 mb-2">Email *</label>
-            <input 
-              type="email" 
+            <input
+              type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -181,8 +181,8 @@ export default function BookingFormPage() {
             {formErrors.email && <p className="text-[13px] text-red-500 mt-1">{formErrors.email}</p>}
           </div>
 
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             disabled={loading}
             className="bg-[#006bff] text-white font-bold text-[15px] rounded-full px-6 py-3 hover:bg-blue-700 transition-colors disabled:opacity-70"
           >

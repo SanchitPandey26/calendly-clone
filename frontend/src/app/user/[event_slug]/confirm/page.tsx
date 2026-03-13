@@ -6,13 +6,13 @@ import { CheckCircle2, User, Calendar as CalendarIcon, Globe, Video, Clock, Exte
 import { getEventBySlug, EventType } from '@/services/events';
 import { getAvailability } from '@/services/availability';
 import PoweredByRibbon from '@/components/ui/PoweredByRibbon';
-import { formatTimeInTimezone } from '@/utils/timezoneUtils';
+import { formatTimeInTimezone } from '@/src/utils/timezoneUtils';
 
 export default function ConfirmationPage() {
   const searchParams = useSearchParams();
   const params = useParams();
   const eventSlug = params.event_slug as string;
-  
+
   const startTime = searchParams.get('startTime');
   const endTime = searchParams.get('endTime');
   const name = searchParams.get('name');
@@ -61,7 +61,7 @@ export default function ConfirmationPage() {
   const formatDateTime = () => {
     if (!startTime || !endTime) return '';
     const startDate = new Date(startTime);
-    
+
     const startFormatted = formatTimeInTimezone(startTime, availTzId, selectedTzId);
     const endFormatted = formatTimeInTimezone(endTime, availTzId, selectedTzId);
 
@@ -80,12 +80,12 @@ export default function ConfirmationPage() {
           </div>
           <h1 className="text-[24px] font-bold text-gray-900">You are scheduled</h1>
         </div>
-        
+
 
 
         <div className="w-full max-w-[450px] border border-gray-200 rounded-lg p-6 text-left">
           <h2 className="text-[20px] font-bold text-gray-900 mb-6">{loadingEvent ? '...' : eventType?.name}</h2>
-          
+
           <div className="space-y-4">
             <div className="flex items-start gap-3 text-gray-600 font-medium">
               <User size={20} className="mt-0.5" />

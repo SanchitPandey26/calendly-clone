@@ -9,7 +9,7 @@ import { getAvailability, AvailabilitySlot } from '@/services/availability';
 import { ToastContainer } from '@/components/ui/Toast';
 import { useToast } from '@/hooks/useToast';
 import PoweredByRibbon from '@/components/ui/PoweredByRibbon';
-import { DisplaySlot, convertSlotsForDisplay, filterPastSlots, formatHM } from '@/utils/timezoneUtils';
+import { DisplaySlot, convertSlotsForDisplay, filterPastSlots, formatHM } from '@/src/utils/timezoneUtils';
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
@@ -18,17 +18,17 @@ export default function DateSelectionPage() {
   const router = useRouter();
   const params = useParams();
   const eventSlug = params.event_slug as string;
-  
+
   const [currentDate, setCurrentDate] = useState(new Date(2026, 2, 1)); // March 2026
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [rawSlots, setRawSlots] = useState<TimeSlot[]>([]);
   const [displaySlots, setDisplaySlots] = useState<DisplaySlot[]>([]);
   const [selectedSlot, setSelectedSlot] = useState<DisplaySlot | null>(null);
   const [loadingSlots, setLoadingSlots] = useState(false);
-  
+
   const [eventType, setEventType] = useState<EventType | null>(null);
   const [loadingEvent, setLoadingEvent] = useState(true);
-  
+
   const [availability, setAvailability] = useState<AvailabilitySlot[]>([]);
   const [loadingAvailability, setLoadingAvailability] = useState(true);
   const [eventNotFound, setEventNotFound] = useState(false);
@@ -88,7 +88,7 @@ export default function DateSelectionPage() {
           timeZone: tz
         }).format(new Date()).toLowerCase();
         setCurrentTime(timeString);
-      } catch(e) {
+      } catch (e) {
         setCurrentTime('');
       }
     };
@@ -101,7 +101,7 @@ export default function DateSelectionPage() {
     const handleClickOutside = (e: MouseEvent) => {
       const dropdown = document.getElementById('timezone-dropdown');
       if (dropdown && dropdown.contains(e.target as Node)) return;
-      
+
       if (isTimezoneOpen && timezoneRef.current && !timezoneRef.current.contains(e.target as Node)) {
         setIsTimezoneOpen(false);
       }
@@ -110,7 +110,7 @@ export default function DateSelectionPage() {
     const handleScroll = (e: Event) => {
       const dropdown = document.getElementById('timezone-dropdown');
       if (dropdown && e.target && dropdown.contains(e.target as Node)) return;
-      if (isTimezoneOpen) setIsTimezoneOpen(false); 
+      if (isTimezoneOpen) setIsTimezoneOpen(false);
     };
     window.addEventListener('scroll', handleScroll, true);
     window.addEventListener('resize', handleScroll);
@@ -126,7 +126,7 @@ export default function DateSelectionPage() {
       const rect = timezoneRef.current.getBoundingClientRect();
       const spaceBelow = window.innerHeight - rect.bottom;
       const spaceAbove = rect.top;
-      
+
       if (spaceBelow < 250 && spaceAbove > spaceBelow) {
         setDropdownStyle({
           position: 'fixed',
@@ -167,9 +167,9 @@ export default function DateSelectionPage() {
 
   // Get the availability timezone IANA ID
   const availTzId = availability.length > 0 && availability[0].timezone
-    ? (TIMEZONES.find(t => t.label === availability[0].timezone)?.id || 
-       // Try using timezone value directly as IANA ID
-       availability[0].timezone)
+    ? (TIMEZONES.find(t => t.label === availability[0].timezone)?.id ||
+      // Try using timezone value directly as IANA ID
+      availability[0].timezone)
     : 'Asia/Kolkata';
 
   // Get the selected display timezone IANA ID
@@ -193,7 +193,7 @@ export default function DateSelectionPage() {
     setSelectedDate(newDate);
     setSelectedSlot(null);
     setLoadingSlots(true);
-    
+
     try {
       // Format date as YYYY-MM-DD
       const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -244,7 +244,7 @@ export default function DateSelectionPage() {
         </button>
         <div className="text-gray-500 font-medium mb-1">Sanchit Pandey</div>
         <h1 className="text-[22px] sm:text-[28px] font-bold text-gray-900 mb-6">{loadingEvent ? '...' : eventType?.name}</h1>
-        
+
         <div className="flex items-center gap-3 text-gray-600 mb-4 font-medium">
           <Clock size={20} />
           <span>{loadingEvent ? '--' : eventType?.duration} min</span>
@@ -261,7 +261,7 @@ export default function DateSelectionPage() {
       <div className={`p-4 sm:p-8 flex-1 flex flex-col relative ${selectedDate ? 'md:flex-row gap-6 sm:gap-8' : ''}`}>
         <div className={`flex flex-col ${selectedDate ? 'md:w-[60%]' : 'w-full max-w-[500px] mx-auto'}`}>
           <h2 className="text-[20px] font-bold text-gray-900 mb-6">Select a Date & Time</h2>
-          
+
           {/* Calendar Header */}
           <div className="flex items-center justify-center gap-8 mb-6">
             <button onClick={handlePrevMonth} className="p-2 text-[#006bff] hover:bg-blue-50 rounded-full transition-colors">
@@ -282,11 +282,11 @@ export default function DateSelectionPage() {
                 {day}
               </div>
             ))}
-            
+
             {Array.from({ length: startingDay }).map((_, i) => (
               <div key={`empty-${i}`} />
             ))}
-            
+
             {Array.from({ length: daysInMonth }).map((_, i) => {
               const day = i + 1;
               const isSelected = selectedDate?.getDate() === day && selectedDate?.getMonth() === month;
@@ -294,7 +294,7 @@ export default function DateSelectionPage() {
               const today = new Date();
               today.setHours(0, 0, 0, 0);
               const isPast = dateObj < today;
-              
+
               const dayOfWeekName = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'][dateObj.getDay()];
               const hasAvailability = availability.some(a => a.dayOfWeek === dayOfWeekName);
               const isAvailable = !isPast && hasAvailability && !loadingAvailability;
@@ -305,9 +305,9 @@ export default function DateSelectionPage() {
                     onClick={() => isAvailable && handleDateClick(day)}
                     disabled={!isAvailable}
                     className={`w-11 h-11 rounded-full flex items-center justify-center text-[15px] font-medium transition-colors relative
-                      ${isSelected ? 'bg-[#006bff] text-white' : 
-                        isAvailable ? 'text-[#006bff] bg-blue-50 hover:bg-blue-100' : 
-                        'text-gray-400 cursor-default'}
+                      ${isSelected ? 'bg-[#006bff] text-white' :
+                        isAvailable ? 'text-[#006bff] bg-blue-50 hover:bg-blue-100' :
+                          'text-gray-400 cursor-default'}
                     `}
                   >
                     {day}
@@ -323,7 +323,7 @@ export default function DateSelectionPage() {
           {/* Timezone */}
           <div className="mt-auto">
             <div className="text-[14px] font-bold text-gray-900 mb-2">Time zone</div>
-            <button 
+            <button
               ref={timezoneRef}
               onClick={toggleTimezone}
               className="flex items-center gap-2 text-[15px] text-gray-700 hover:text-gray-900 py-1 rounded-md transition-colors w-fit"
@@ -331,14 +331,14 @@ export default function DateSelectionPage() {
               <Globe size={16} />
               {timezone} {currentTime ? `(${currentTime})` : ''}
               <svg width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg" className={`ml-1 transition-transform ${isTimezoneOpen ? 'rotate-180' : ''}`}>
-                <path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </button>
 
             {isTimezoneOpen && (
-              <div 
+              <div
                 id="timezone-dropdown"
-                style={dropdownStyle} 
+                style={dropdownStyle}
                 className="bg-white rounded-lg shadow-xl border border-gray-200 py-2 max-h-[280px] overflow-y-auto"
               >
                 {TIMEZONES.map((tz) => (
@@ -367,7 +367,7 @@ export default function DateSelectionPage() {
             <div className="text-[16px] text-gray-700 mb-6">
               {selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
             </div>
-            
+
             <div className="flex-1 overflow-y-auto pr-2 space-y-2 max-h-[400px] custom-scrollbar">
               {loadingSlots ? (
                 <div className="text-center text-gray-500 py-4">Loading...</div>
@@ -379,16 +379,16 @@ export default function DateSelectionPage() {
                       <button
                         onClick={() => setSelectedSlot(slot)}
                         className={`flex-1 py-3.5 rounded-md border text-[15px] font-bold transition-all
-                          ${isSelected 
-                            ? 'bg-gray-600 border-gray-600 text-white w-1/2' 
-                            : 'border-[#006bff] text-[#006bff] hover:border-[2px] hover:py-[13px] bg-white'
+                          ${isSelected
+                            ? 'bg-gray-600 border-gray-600 text-white w-1/2'
+                            : 'border-[#006bff] text-[#006bff] hover:border-2 hover:py-[13px] bg-white'
                           }
                         `}
                       >
                         {formatHM(slot.displayStartH, slot.displayStartM)}
                       </button>
                       {isSelected && (
-                        <button 
+                        <button
                           onClick={handleNext}
                           className="flex-1 bg-[#006bff] text-white rounded-md font-bold text-[15px] hover:bg-blue-700 transition-colors"
                         >
