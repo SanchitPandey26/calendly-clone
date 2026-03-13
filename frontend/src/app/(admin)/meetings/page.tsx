@@ -1,12 +1,14 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Play, Trash2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Play, Trash2, RotateCcw } from 'lucide-react';
 import { getUpcomingBookings, getPastBookings, cancelBooking, Booking } from '@/services/bookings';
 import { ToastContainer } from '@/components/ui/Toast';
 import { useToast, getErrorMessage } from '@/hooks/useToast';
 
 export default function MeetingsPage() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<'upcoming' | 'past'>('upcoming');
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
@@ -206,13 +208,35 @@ export default function MeetingsPage() {
                           {/* Left Column - Actions */}
                           <div className="w-full sm:w-[240px] shrink-0 flex flex-col gap-3">
                             {activeTab === 'upcoming' && (
-                              <button 
-                                onClick={() => handleCancelClick(booking)}
-                                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-gray-300 rounded-full text-[15px] font-medium text-gray-700 hover:border-gray-400 hover:bg-gray-50 transition-colors cursor-pointer"
-                              >
-                                <Trash2 size={16} />
-                                Cancel
-                              </button>
+                              <>
+                                <button 
+                                  onClick={() => {
+                                    const params = new URLSearchParams({
+                                      eventTypeId: booking.eventTypeId,
+                                      inviteeName: booking.inviteeName,
+                                      inviteeEmail: booking.inviteeEmail,
+                                      date: booking.date,
+                                      startTime: booking.startTime,
+                                      endTime: booking.endTime,
+                                      eventName: booking.eventType?.name || 'Meeting',
+                                      eventSlug: booking.eventType?.slug || '',
+                                      duration: String(booking.eventType?.duration || 30),
+                                    });
+                                    router.push(`/reschedule/${booking.id}?${params.toString()}`);
+                                  }}
+                                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-gray-300 rounded-full text-[15px] font-medium text-gray-700 hover:border-gray-400 hover:bg-gray-50 transition-colors cursor-pointer"
+                                >
+                                  <RotateCcw size={16} />
+                                  Reschedule
+                                </button>
+                                <button 
+                                  onClick={() => handleCancelClick(booking)}
+                                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-gray-300 rounded-full text-[15px] font-medium text-gray-700 hover:border-gray-400 hover:bg-gray-50 transition-colors cursor-pointer"
+                                >
+                                  <Trash2 size={16} />
+                                  Cancel
+                                </button>
+                              </>
                             )}
                           </div>
 

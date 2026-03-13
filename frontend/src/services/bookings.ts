@@ -33,3 +33,12 @@ export const cancelBooking = async (id: string): Promise<Booking> => {
   const response = await api.patch(`/bookings/${id}/cancel`);
   return response.data;
 };
+
+export const rescheduleBooking = async (
+  id: string,
+  newStartTime: string,
+  newEndTime: string
+): Promise<Booking> => {
+  const response = await api.patch(`/bookings/${id}/reschedule`, { newStartTime, newEndTime });
+  return response.data;
+};

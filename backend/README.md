@@ -31,14 +31,41 @@ A typical request follows this path:
 - **Language**: TypeScript
 - **Tools**: ts-node-dev (for development), dotenv (env management), cors.
 
-## 📡 API Endpoints (Brief)
+## 📡 API Endpoints
 
-| Endpoint | Method | Description |
+### Event Types
+| Method | Endpoint | Description |
 | :--- | :--- | :--- |
-| `/api/event-types` | `GET/POST/DELETE` | Manage event configurations. |
-| `/api/availability` | `GET/POST` | Manage host availability. |
-| `/api/slots` | `GET` | Fetch available slots for a specific event and date. |
-| `/api/bookings` | `GET/POST/DELETE` | Manage scheduled meetings. |
+| `GET` | `/api/event-types` | Get all event types |
+| `GET` | `/api/event-types/:id` | Get event type by ID |
+| `GET` | `/api/event-types/slug/:slug` | Get event type by URL slug |
+| `POST` | `/api/event-types` | Create a new event type |
+| `PUT` | `/api/event-types/:id` | Update an existing event type |
+| `DELETE`| `/api/event-types/:id` | Delete an event type |
+
+### Availability
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/availability` | Get all availability slots |
+| `POST` | `/api/availability` | Create a new availability slot |
+| `PUT` | `/api/availability/timezone` | Bulk update host timezone |
+| `GET` | `/api/availability/:id` | Get availability slot by ID |
+| `PUT` | `/api/availability/:id` | Update availability slot by ID |
+| `DELETE`| `/api/availability/:id` | Delete availability slot |
+
+### Slots (Public Booking)
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/slots?date=YYYY-MM-DD&eventTypeId=XYZ` | Get available time slots for a specific date and event type |
+
+### Bookings
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `POST` | `/api/bookings` | Create a new booking |
+| `GET` | `/api/bookings/upcoming` | Get all upcoming scheduled bookings |
+| `GET` | `/api/bookings/past` | Get all past bookings |
+| `PATCH` | `/api/bookings/:id/cancel` | Cancel an upcoming booking |
+| `PATCH` | `/api/bookings/:id/reschedule` | Reschedule an upcoming booking |
 
 ## 🧪 Development
 

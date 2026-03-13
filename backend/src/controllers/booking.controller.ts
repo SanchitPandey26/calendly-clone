@@ -48,3 +48,18 @@ export async function cancel(req: Request, res: Response) {
     res.status(500).json({ message: 'Internal server error.' });
   }
 }
+
+export async function reschedule(req: Request, res: Response) {
+  try {
+    const id = req.params.id as string;
+    const { newStartTime, newEndTime } = req.body;
+    const booking = await bookingService.rescheduleBooking(id, newStartTime, newEndTime);
+    res.status(200).json(booking);
+  } catch (error: any) {
+    if (error.status) {
+      res.status(error.status).json({ message: error.message, errors: error.errors });
+      return;
+    }
+    res.status(500).json({ message: 'Internal server error.' });
+  }
+}

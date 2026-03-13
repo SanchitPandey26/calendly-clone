@@ -16,9 +16,10 @@ This project is a multi-user scheduling platform that allows users to create eve
 ## ✨ Features
 
 ### Admin Features (Event Owner)
-- **Event Type Management**: Create, edit, and delete event types with custom durations and descriptions.
+- **Event Type Management**: Create, edit, and delete event types with custom durations.
 - **Availability Settings**: Configure weekly availability windows (hours and days) for scheduling.
 - **Meetings Dashboard**: View upcoming and past bookings in the host's local timezone.
+- **Rescheduling**: Host can reschedule upcoming meetings to a new date and time directly from the dashboard.
 - **Smart URL Slugs**: Automatic slug generation for event types to create shareable links.
 
 ### Public Booking Features
@@ -54,7 +55,7 @@ PORT=8000
 ```bash
 npx prisma db push
 npx prisma generate
-npm run seed # Optional: seed initial data
+npx prisma db seed # Optional: seed initial data
 ```
 - Start the backend:
 ```bash

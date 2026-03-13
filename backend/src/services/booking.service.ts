@@ -146,3 +146,61 @@ export async function cancelBooking(id: string) {
     },
   });
 }
+
+export async function rescheduleBooking(
+  id: string,
+  newStartTime: string,
+  newEndTime: string
+) {
+  // 1. Validate the new times
+  if (!newStartTime || isNaN(Date.parse(newStartTime))) {
+    throw { status: 400, message: 'newStartTime must be a valid ISO date string.' };
+  }
+  if (!newEndTime || isNaN(Date.parse(newEndTime))) {
+    throw { status: 400, message: 'newEndTime must be a valid ISO date string.' };
+  }
+  const start = new Date(newStartTime);
+  const end = new Date(newEndTime);
+  if (start >= end) {
+    throw { status: 400, message: 'newStartTime must be before newEndTime.' };
+  }
+
+  // 2. Booking must exist and be SCHEDULED
+  const booking = await prisma.booking.findUnique({ where: { id } });
+  if (!booking) {
+    throw { status: 404, message: 'Booking not found.' };
+  }
+  if (booking.status === 'CANCELLED') {
+    throw { status: 400, message: 'Cannot reschedule a cancelled booking.' };
+  }
+
+  // 3. Double-booking check (exclude the current booking itself)
+  const overlapping = await prisma.booking.findFirst({
+    where: {
+      id: { not: id },
+      status: 'SCHEDULED',
+      startTime: { lt: end },
+      endTime: { gt: start },
+    },
+  });
+  if (overlapping) {
+    throw { status: 409, message: 'This time slot is already booked.' };
+  }
+
+  // 4. Derive new date from newStartTime
+  const dateStr = newStartTime.split('T')[0];
+  const date = new Date(dateStr + 'T00:00:00.000Z');
+
+  // 5. Update the booking
+  return prisma.booking.update({
+    where: { id },
+    data: {
+      date,
+      startTime: start,
+      endTime: end,
+    },
+    include: {
+      eventType: true,
+    },
+  });
+}
