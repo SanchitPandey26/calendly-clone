@@ -2,18 +2,22 @@
 
 A full-stack, timezone-aware scheduling application inspired by Calendly, built with **Next.js**, **Express**, and **Prisma**.
 
-## 🚀 Overview
+## Overview
 
 This project is a multi-user scheduling platform that allows users to create event types, set availability, and share public booking links. It features a robust timezone conversion system that ensures both hosts and guests can coordinate across different regions seamlessly.
 
-## 🛠 Tech Stack
+## Live Demo
+Frontend: https://calendly-clone-pi.vercel.app/ <br/>
+Backend: https://calendly-clone-backend-azure.vercel.app/
+
+## Tech Stack
 
 - **Frontend**: Next.js 15+, React 19, TypeScript, Lucide React, Tailwind CSS (for base utilities), Vanilla CSS (for custom ribbons and complex UI).
 - **Backend**: Node.js, Express, TypeScript, Prisma ORM.
 - **Database**: PostgreSQL (via Prisma Client).
 - **Communication**: Axios for API interactions.
 
-## ✨ Features
+## Features
 
 ### Admin Features (Event Owner)
 - **Event Type Management**: Create, edit, and delete event types with custom durations.
@@ -28,7 +32,7 @@ This project is a multi-user scheduling platform that allows users to create eve
 - **Real-time Filtering**: Past time slots are automatically hidden based on the selected timezone's current time.
 - **Booking Flow**: A seamless 3-step process (Date/Time Selection → Guest Details Form → Confirmation).
 
-## ⚙️ Setup Instructions
+## Setup Instructions
 
 ### Prerequisites
 - Node.js (v18+)
@@ -76,7 +80,7 @@ NEXT_PUBLIC_BASE_URL="http://localhost:8000/api"
 npm run dev
 ```
 
-## 🧠 Key Assumptions & Design Decisions
+## Key Assumptions & Design Decisions
 
 ### Timezone Strategy ("Fake UTC")
 To maintain simplicity and consistency, the backend encodes the host's local availability time directly into UTC ISO strings (e.g., if a host is available at 09:00 AM local time, it is stored as `T09:00:00.000Z` regardless of the host's actual offset). 
