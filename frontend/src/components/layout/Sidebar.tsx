@@ -61,7 +61,7 @@ export default function Sidebar() {
       ${mobileOpen ? 'translate-x-0 w-[240px]' : '-translate-x-full w-[240px]'}
       md:translate-x-0 ${isSidebarCollapsed ? 'md:w-[72px]' : 'md:w-[240px]'}`}>
       <div className="p-4 flex-1 overflow-y-auto overflow-x-hidden no-scrollbar">
-        <div className={`flex items-center justify-between mb-6 ${isSidebarCollapsed ? '-mx-1' : 'px-1'}`}>
+        <div className={`flex items-center justify-between mb-6 ${isSidebarCollapsed && !mobileOpen ? '-mx-1' : 'px-1'}`}>
           <div className="flex items-center gap-2">
             <Image 
               src="/calendly-logo.svg" 
@@ -70,7 +70,7 @@ export default function Sidebar() {
               height={28} 
               className="shrink-0"
             />
-            {!isSidebarCollapsed && (
+            {(!isSidebarCollapsed || mobileOpen) && (
               <Image 
                 src="/calendly-title.svg" 
                 alt="Calendly" 
@@ -90,20 +90,20 @@ export default function Sidebar() {
               }
             }}
             className="text-gray-500 hover:bg-gray-100 p-1 rounded-md transition-colors"
-            title={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            title={(!isSidebarCollapsed || mobileOpen) ? "Collapse sidebar" : "Expand sidebar"}
           >
             <span className="md:hidden"><X size={18} /></span>
-            <span className="hidden md:block">{isSidebarCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}</span>
+            <span className="hidden md:block">{(!isSidebarCollapsed || mobileOpen) ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}</span>
           </button>
         </div>
         
         <div className="mb-6">
           <button 
             onClick={() => openCreateDrawer()}
-            className={`flex items-center justify-center gap-2 bg-white border border-[#006bff] text-[#006bff] rounded-full font-medium hover:bg-blue-50 transition-colors ${isSidebarCollapsed ? 'w-10 h-10 p-0 mx-auto' : 'w-full py-2 px-4'}`}
+            className={`flex items-center justify-center gap-2 bg-white border border-[#006bff] text-[#006bff] rounded-full font-medium hover:bg-blue-50 transition-colors ${isSidebarCollapsed && !mobileOpen ? 'w-10 h-10 p-0 mx-auto' : 'w-full py-2 px-4'}`}
           >
             <Plus size={18} />
-            {!isSidebarCollapsed && <span>Create</span>}
+            {(!isSidebarCollapsed || mobileOpen) && <span>Create</span>}
           </button>
         </div>
 
@@ -118,14 +118,14 @@ export default function Sidebar() {
                   isActive 
                     ? 'bg-blue-50 text-[#006bff] font-medium' 
                     : 'text-gray-700 hover:bg-gray-100'
-                } ${isSidebarCollapsed ? 'justify-center' : ''}`}
-                title={isSidebarCollapsed ? item.name : undefined}
+                } ${isSidebarCollapsed && !mobileOpen ? 'justify-center' : ''}`}
+                title={isSidebarCollapsed && !mobileOpen ? item.name : undefined}
               >
-                {isActive && !isSidebarCollapsed && (
+                {isActive && (!isSidebarCollapsed || mobileOpen) && (
                   <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#006bff] rounded-r-md"></div>
                 )}
                 <item.icon size={18} className={`${isActive ? 'text-[#006bff]' : 'text-gray-500'} shrink-0`} />
-                {!isSidebarCollapsed && <span className="text-sm whitespace-nowrap">{item.name}</span>}
+                {(!isSidebarCollapsed || mobileOpen) && <span className="text-sm whitespace-nowrap">{item.name}</span>}
               </Link>
             );
           })}

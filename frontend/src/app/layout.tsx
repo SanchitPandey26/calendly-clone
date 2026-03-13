@@ -2,7 +2,7 @@ import type {Metadata} from 'next';
 import './globals.css'; // Global styles
 
 export const metadata: Metadata = {
-  title: 'Scheduling Platform',
+  title: 'Calendly',
   description: 'A simplified scheduling platform',
 };
 
