@@ -2,7 +2,7 @@
 
 The core API service for the Calendly Clone, built with **Express** and **Prisma**.
 
-## 🏗 Architecture
+## Architecture
 
 The backend follows a **layered architecture** to ensure separation of concerns and maintainability:
 
@@ -11,7 +11,7 @@ The backend follows a **layered architecture** to ensure separation of concerns 
 3.  **Services Layer** (`/src/services`): Contains the core business logic. All database interactions and complex calculations (like slot generation and conflict detection) live here.
 4.  **Data Layer** (`/prisma`): Managed by Prisma ORM. Defines the schema and handles migrations and database seeding.
 
-## 🔄 Control Flow
+## Control Flow
 
 A typical request follows this path:
 `Client Request` → `Express App` → `Router` → `Controller` → `Service` → `Prisma Client` → `Database`
@@ -23,7 +23,7 @@ A typical request follows this path:
 - **Booking**: Handles the creation of new meetings and prevents double-booking of the same slot.
 - **Event Type**: CRUD operations for different types of meetings (e.g., "15 Minute Meeting").
 
-## 🛠 Tech Stack
+## Tech Stack
 
 - **Framework**: Express.js
 - **Runtime**: Node.js
@@ -31,7 +31,7 @@ A typical request follows this path:
 - **Language**: TypeScript
 - **Tools**: ts-node-dev (for development), dotenv (env management), cors.
 
-## 📡 API Endpoints
+## API Endpoints
 
 ### Event Types
 | Method | Endpoint | Description |
@@ -67,13 +67,13 @@ A typical request follows this path:
 | `PATCH` | `/api/bookings/:id/cancel` | Cancel an upcoming booking |
 | `PATCH` | `/api/bookings/:id/reschedule` | Reschedule an upcoming booking |
 
-## 🧪 Development
+## Development
 
 - **Run in dev mode**: `npm run dev`
 - **Build**: `npm run build`
 - **Prisma Studio**: `npx prisma studio` (to view database records).
 
-## 📌 Implementation Notes
+## Implementation Notes
 
 - **Slot Strategy**: The server generates slots on the fly based on the `Availability` table. It returns "fake UTC" ISO strings to the frontend to ensure the local availability time is preserved regardless of the database server's location.
 - **Health Check**: A simple GET `/health` endpoint is available to verify the service status.
