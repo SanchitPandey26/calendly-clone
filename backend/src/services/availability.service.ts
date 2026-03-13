@@ -134,3 +134,13 @@ export async function deleteAvailability(id: string) {
 
   return prisma.availability.delete({ where: { id } });
 }
+
+export async function updateTimezoneForAll(timezone: string) {
+  if (!timezone || timezone.trim().length === 0) {
+    throw { status: 400, message: 'Validation failed.', errors: ['timezone cannot be empty.'] };
+  }
+  
+  return prisma.availability.updateMany({
+    data: { timezone: timezone.trim() },
+  });
+}

@@ -68,3 +68,17 @@ export async function remove(req: Request, res: Response) {
     res.status(500).json({ message: 'Internal server error.' });
   }
 }
+
+export async function updateTimezone(req: Request, res: Response) {
+  try {
+    const { timezone } = req.body;
+    await availabilityService.updateTimezoneForAll(timezone);
+    res.status(200).json({ message: 'Timezone updated successfully for all slots.' });
+  } catch (error: any) {
+    if (error.status) {
+      res.status(error.status).json({ message: error.message, errors: error.errors });
+      return;
+    }
+    res.status(500).json({ message: 'Internal server error.' });
+  }
+}

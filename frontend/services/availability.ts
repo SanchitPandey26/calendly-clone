@@ -34,3 +34,7 @@ export async function updateAvailability(id: string, slot: UpdateAvailabilitySlo
 export async function deleteAvailability(id: string): Promise<void> {
   await api.delete(`/availability/${id}`);
 }
+
+export async function updateTimezoneAll(timezone: string): Promise<void> {
+  await api.put('/availability/timezone', { timezone });
+}

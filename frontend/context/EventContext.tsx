@@ -8,6 +8,8 @@ interface EventContextType {
   editingEvent: EventType | null;
   openCreateDrawer: (event?: EventType | null) => void;
   closeCreateDrawer: () => void;
+  isSidebarCollapsed: boolean;
+  setIsSidebarCollapsed: (val: boolean) => void;
 }
 
 const EventContext = createContext<EventContextType | undefined>(undefined);
@@ -15,6 +17,7 @@ const EventContext = createContext<EventContextType | undefined>(undefined);
 export function EventProvider({ children }: { children: React.ReactNode }) {
   const [isCreateDrawerOpen, setIsCreateDrawerOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<EventType | null>(null);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   const openCreateDrawer = (event: EventType | null = null) => {
     setEditingEvent(event);
@@ -26,7 +29,7 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <EventContext.Provider value={{ isCreateDrawerOpen, editingEvent, openCreateDrawer, closeCreateDrawer }}>
+    <EventContext.Provider value={{ isCreateDrawerOpen, editingEvent, openCreateDrawer, closeCreateDrawer, isSidebarCollapsed, setIsSidebarCollapsed }}>
       {children}
     </EventContext.Provider>
   );

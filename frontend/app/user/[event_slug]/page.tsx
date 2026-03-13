@@ -6,6 +6,10 @@ import { ArrowLeft, Clock, Video, Globe, ChevronLeft, ChevronRight, Check } from
 import { getSlots, TimeSlot } from '@/services/booking';
 import { getEventBySlug, EventType } from '@/services/events';
 import { getAvailability, AvailabilitySlot } from '@/services/availability';
+import { ToastContainer } from '@/components/ui/Toast';
+import { useToast } from '@/hooks/useToast';
+import PoweredByRibbon from '@/components/ui/PoweredByRibbon';
+import { DisplaySlot, convertSlotsForDisplay, filterPastSlots, formatHM } from '@/utils/timezoneUtils';
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
@@ -17,8 +21,9 @@ export default function DateSelectionPage() {
   
   const [currentDate, setCurrentDate] = useState(new Date(2026, 2, 1)); // March 2026
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [slots, setSlots] = useState<TimeSlot[]>([]);
-  const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
+  const [rawSlots, setRawSlots] = useState<TimeSlot[]>([]);
+  const [displaySlots, setDisplaySlots] = useState<DisplaySlot[]>([]);
+  const [selectedSlot, setSelectedSlot] = useState<DisplaySlot | null>(null);
   const [loadingSlots, setLoadingSlots] = useState(false);
   
   const [eventType, setEventType] = useState<EventType | null>(null);
@@ -26,6 +31,8 @@ export default function DateSelectionPage() {
   
   const [availability, setAvailability] = useState<AvailabilitySlot[]>([]);
   const [loadingAvailability, setLoadingAvailability] = useState(true);
+  const [eventNotFound, setEventNotFound] = useState(false);
+  const { toasts, removeToast, showError } = useToast();
 
   const [isTimezoneOpen, setIsTimezoneOpen] = useState(false);
   const [timezone, setTimezone] = useState('India Standard Time');
@@ -51,9 +58,14 @@ export default function DateSelectionPage() {
           getEventBySlug(eventSlug),
           getAvailability()
         ]);
-        setEventType(event);
-        setAvailability(availData);
-      } catch (error) {
+        if (!event) {
+          setEventNotFound(true);
+        } else {
+          setEventType(event);
+          setAvailability(availData);
+        }
+      } catch (error: unknown) {
+        showError('Failed to load event. Please try again.');
         console.error('Failed to fetch event:', error);
       } finally {
         setLoadingEvent(false);
@@ -153,6 +165,28 @@ export default function DateSelectionPage() {
     setSelectedDate(null);
   };
 
+  // Get the availability timezone IANA ID
+  const availTzId = availability.length > 0 && availability[0].timezone
+    ? (TIMEZONES.find(t => t.label === availability[0].timezone)?.id || 
+       // Try using timezone value directly as IANA ID
+       availability[0].timezone)
+    : 'Asia/Kolkata';
+
+  // Get the selected display timezone IANA ID
+  const selectedTzId = TIMEZONES.find(t => t.label === timezone)?.id || 'Asia/Kolkata';
+
+  // Re-convert and re-filter slots when timezone changes
+  useEffect(() => {
+    if (rawSlots.length === 0) {
+      setDisplaySlots([]);
+      return;
+    }
+    const converted = convertSlotsForDisplay(rawSlots, availTzId, selectedTzId);
+    const isToday = selectedDate ? selectedDate.toDateString() === new Date().toDateString() : false;
+    const filtered = filterPastSlots(converted, isToday, selectedTzId);
+    setDisplaySlots(filtered);
+  }, [timezone, rawSlots, selectedDate]);
+
   const handleDateClick = async (day: number) => {
     if (!eventType) return;
     const newDate = new Date(year, month, day);
@@ -164,47 +198,52 @@ export default function DateSelectionPage() {
       // Format date as YYYY-MM-DD
       const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
       const fetchedSlots = await getSlots(eventType.id, dateStr);
-      setSlots(fetchedSlots);
+      setRawSlots(fetchedSlots);
     } catch (error) {
+      showError('Failed to load available slots. Please try again.');
       console.error('Failed to fetch slots:', error);
     } finally {
       setLoadingSlots(false);
     }
   };
 
-  const formatTime = (isoString: string) => {
-    const date = new Date(isoString);
-    let h = date.getUTCHours();
-    const m = date.getUTCMinutes();
-    const ampm = h >= 12 ? 'pm' : 'am';
-    h = h % 12;
-    h = h ? h : 12;
-    return `${h}:${String(m).padStart(2, '0')}${ampm}`;
-  };
-
   const handleNext = () => {
     if (selectedDate && selectedSlot) {
       const dateStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`;
-      router.push(`/user/${eventSlug}/form?date=${dateStr}&startTime=${selectedSlot.startTime}&endTime=${selectedSlot.endTime}`);
+      router.push(`/user/${eventSlug}/form?date=${dateStr}&startTime=${selectedSlot.originalStartTime}&endTime=${selectedSlot.originalEndTime}&tz=${encodeURIComponent(timezone)}`);
     }
   };
 
-  return (
-    <div className="bg-white rounded-lg shadow-[0_1px_8px_rgba(0,0,0,0.08)] border border-gray-200 flex flex-col md:flex-row max-w-[1060px] w-full relative overflow-hidden min-h-[600px]">
-      {/* Powered by Calendly Ribbon */}
-      <div className="absolute top-0 right-0 w-32 h-32 overflow-hidden z-10 pointer-events-none">
-        <div className="bg-gray-600 text-white text-[10px] font-bold py-1.5 px-10 transform rotate-45 translate-x-[34px] translate-y-[22px] text-center tracking-wider uppercase">
-          Powered by<br/>Calendly
-        </div>
+  if (eventNotFound) {
+    return (
+      <div className="bg-white rounded-lg shadow-[0_1px_8px_rgba(0,0,0,0.08)] border border-gray-200 max-w-[600px] w-full p-12 text-center">
+        <div className="text-6xl mb-6">📅</div>
+        <h1 className="text-[24px] font-bold text-gray-900 mb-3">Event Not Found</h1>
+        <p className="text-[16px] text-gray-500 mb-8">
+          The event you're looking for doesn't exist or may have been removed.
+        </p>
+        <button
+          onClick={() => router.push('/')}
+          className="px-6 py-2.5 bg-[#006bff] text-white font-bold rounded-full hover:bg-blue-700 transition-colors text-[15px]"
+        >
+          Go Home
+        </button>
       </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-lg shadow-[0_1px_8px_rgba(0,0,0,0.08)] border border-gray-200 flex flex-col md:flex-row max-w-[1060px] w-full relative overflow-hidden min-h-[500px] md:min-h-[600px]">
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
+      <PoweredByRibbon />
 
       {/* Left Panel */}
-      <div className="w-full md:w-[380px] p-8 border-r border-gray-200 flex flex-col">
+      <div className="w-full md:w-[380px] p-4 sm:p-8 border-b md:border-b-0 md:border-r border-gray-200 flex flex-col">
         <button className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center text-[#006bff] hover:bg-blue-50 transition-colors mb-6">
           <ArrowLeft size={20} />
         </button>
         <div className="text-gray-500 font-medium mb-1">Sanchit Pandey</div>
-        <h1 className="text-[28px] font-bold text-gray-900 mb-6">{loadingEvent ? '...' : eventType?.name}</h1>
+        <h1 className="text-[22px] sm:text-[28px] font-bold text-gray-900 mb-6">{loadingEvent ? '...' : eventType?.name}</h1>
         
         <div className="flex items-center gap-3 text-gray-600 mb-4 font-medium">
           <Clock size={20} />
@@ -215,14 +254,11 @@ export default function DateSelectionPage() {
           <span className="leading-snug">Web conferencing details provided upon confirmation.</span>
         </div>
 
-        <div className="mt-auto pt-8 flex gap-4 text-[14px] text-[#006bff]">
-          <a href="#" className="hover:underline">Cookie settings</a>
-          <a href="#" className="hover:underline">Privacy Policy</a>
-        </div>
+
       </div>
 
       {/* Right Panel */}
-      <div className={`p-8 flex-1 flex flex-col relative ${selectedDate ? 'md:flex-row gap-8' : ''}`}>
+      <div className={`p-4 sm:p-8 flex-1 flex flex-col relative ${selectedDate ? 'md:flex-row gap-6 sm:gap-8' : ''}`}>
         <div className={`flex flex-col ${selectedDate ? 'md:w-[60%]' : 'w-full max-w-[500px] mx-auto'}`}>
           <h2 className="text-[20px] font-bold text-gray-900 mb-6">Select a Date & Time</h2>
           
@@ -335,9 +371,9 @@ export default function DateSelectionPage() {
             <div className="flex-1 overflow-y-auto pr-2 space-y-2 max-h-[400px] custom-scrollbar">
               {loadingSlots ? (
                 <div className="text-center text-gray-500 py-4">Loading...</div>
-              ) : slots.length > 0 ? (
-                slots.map((slot, i) => {
-                  const isSelected = selectedSlot?.startTime === slot.startTime;
+              ) : displaySlots.length > 0 ? (
+                displaySlots.map((slot, i) => {
+                  const isSelected = selectedSlot?.originalStartTime === slot.originalStartTime;
                   return (
                     <div key={i} className="flex gap-2">
                       <button
@@ -349,7 +385,7 @@ export default function DateSelectionPage() {
                           }
                         `}
                       >
-                        {formatTime(slot.startTime)}
+                        {formatHM(slot.displayStartH, slot.displayStartM)}
                       </button>
                       {isSelected && (
                         <button 
@@ -369,15 +405,7 @@ export default function DateSelectionPage() {
           </div>
         )}
 
-        {/* Troubleshoot Button */}
-        {!selectedDate && (
-          <div className="absolute bottom-8 right-8">
-            <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-full text-[14px] font-medium text-gray-700 hover:border-gray-400 transition-colors bg-white">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
-              Troubleshoot
-            </button>
-          </div>
-        )}
+
       </div>
     </div>
   );

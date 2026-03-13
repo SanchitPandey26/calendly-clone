@@ -1,28 +1,41 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { getEvents, createEvent, updateEvent, deleteEvent, EventType } from '@/services/events';
+import { getAvailability, AvailabilitySlot } from '@/services/availability';
 import EventCard from '@/components/events/EventCard';
-import CreateEventDrawer from '@/components/events/CreateEvenDrawer';
-import { Search, Plus, ChevronDown, HelpCircle, UserPlus, ExternalLink, MoreVertical } from 'lucide-react';
+import CreateEventDrawer from '@/components/events/CreateEventDrawer';
+import { Search, Plus } from 'lucide-react';
 import { useEventContext } from '@/context/EventContext';
+import { ToastContainer } from '@/components/ui/Toast';
+import { useToast, getErrorMessage } from '@/hooks/useToast';
 
 export default function SchedulingPage() {
   const [events, setEvents] = useState<EventType[]>([]);
+  const [availability, setAvailability] = useState<AvailabilitySlot[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [slugError, setSlugError] = useState('');
+  
+  // Delete Modal State
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [eventToDelete, setEventToDelete] = useState<EventType | null>(null);
   
   const { isCreateDrawerOpen, editingEvent, openCreateDrawer, closeCreateDrawer } = useEventContext();
-  const [isCreateMenuOpen, setIsCreateMenuOpen] = useState(false);
-  const createMenuRef = useRef<HTMLDivElement>(null);
+  const { toasts, removeToast, showSuccess, showError } = useToast();
 
   const fetchEvents = async () => {
     try {
       setLoading(true);
-      const data = await getEvents();
-      setEvents(data);
+      const [eventsData, availabilityData] = await Promise.all([
+        getEvents(),
+        getAvailability()
+      ]);
+      setEvents(eventsData);
+      setAvailability(availabilityData);
     } catch (err) {
-      setError('Failed to load events');
+      showError('Failed to load events. Please refresh the page.');
       console.error(err);
     } finally {
       setLoading(false);
@@ -31,130 +44,86 @@ export default function SchedulingPage() {
 
   useEffect(() => {
     fetchEvents();
-    
-    const handleClickOutside = (e: MouseEvent) => {
-      if (createMenuRef.current && !createMenuRef.current.contains(e.target as Node)) {
-        setIsCreateMenuOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const handleSaveEvent = async (data: Partial<EventType>) => {
-    if (editingEvent) {
-      await updateEvent(editingEvent.id, data);
-    } else {
-      await createEvent(data as Omit<EventType, 'id'>);
-    }
-    await fetchEvents();
-    closeCreateDrawer();
-  };
-
-  const handleDeleteEvent = async (id: string) => {
+    setSlugError('');
     try {
-      await deleteEvent(id);
+      if (editingEvent) {
+        await updateEvent(editingEvent.id, data);
+        showSuccess('Event updated successfully!');
+      } else {
+        await createEvent(data as Omit<EventType, 'id'>);
+        showSuccess('Event created successfully!');
+      }
       await fetchEvents();
-    } catch (err) {
-      console.error('Failed to delete event', err);
-      alert('Failed to delete event');
+      closeCreateDrawer();
+    } catch (err: unknown) {
+      const resp = (err as { response?: { status?: number; data?: { message?: string } } })?.response;
+      if (resp?.status === 409) {
+        setSlugError('This URL slug is already taken. Please choose a different one.');
+      } else {
+        showError(getErrorMessage(err, 'Failed to save event.'));
+      }
     }
   };
 
-  const openNewEventDrawer = () => {
-    openCreateDrawer(null);
-    setIsCreateMenuOpen(false);
+  const handleDeleteClick = (event: EventType) => {
+    setEventToDelete(event);
+    setDeleteModalOpen(true);
+  };
+
+  const confirmDeleteEvent = async () => {
+    if (!eventToDelete) return;
+    try {
+      await deleteEvent(eventToDelete.id);
+      await fetchEvents();
+      showSuccess('Event deleted successfully!');
+      setDeleteModalOpen(false);
+      setEventToDelete(null);
+    } catch (err) {
+      showError(getErrorMessage(err, 'Failed to delete event.'));
+      console.error('Failed to delete event', err);
+    }
+  };
+
+  const closeDeleteModal = () => {
+    setDeleteModalOpen(false);
+    setEventToDelete(null);
   };
 
   const openEditDrawer = (event: EventType) => {
     openCreateDrawer(event);
   };
 
+  // Filter events based on search query
+  const filteredEvents = events.filter(event =>
+    event.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
-    <div className="max-w-6xl mx-auto px-8 py-6">
+    <div className="max-w-6xl mx-auto px-4 sm:px-8 py-6 pt-16 md:pt-6">
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
       {/* Top Navigation */}
       <div className="flex justify-end items-center mb-8 gap-4">
-        <button className="p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
-          <UserPlus size={20} />
-        </button>
-        <button className="flex items-center gap-2 text-gray-700 hover:bg-gray-100 px-2 py-1 rounded-md transition-colors">
+        <div className="flex items-center gap-2 px-2 py-1">
           <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center text-gray-700 font-medium text-sm">
             S
           </div>
-          <ChevronDown size={16} />
-        </button>
+        </div>
       </div>
 
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-2">
-          <h1 className="text-2xl font-bold text-gray-900">Scheduling</h1>
-          <HelpCircle size={16} className="text-gray-400 cursor-pointer hover:text-gray-600" />
-        </div>
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Scheduling</h1>
         
-        <div className="relative" ref={createMenuRef}>
-          <button 
-            onClick={() => setIsCreateMenuOpen(!isCreateMenuOpen)}
-            className="flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-full font-medium hover:bg-blue-700 transition-colors shadow-sm"
-          >
-            <Plus size={18} />
-            Create
-            <ChevronDown size={16} className="ml-1" />
-          </button>
-          
-          {isCreateMenuOpen && (
-            <div className="absolute right-0 mt-2 w-72 bg-white border border-gray-200 rounded-lg shadow-xl z-20 py-2">
-              <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                Event type
-              </div>
-              <button 
-                onClick={openNewEventDrawer}
-                className="w-full text-left px-4 py-3 hover:bg-gray-50 flex flex-col transition-colors"
-              >
-                <span className="font-medium text-blue-600">One-on-one</span>
-                <span className="text-sm text-gray-500 flex items-center gap-1">
-                  1 host <span className="text-gray-400">→</span> 1 invitee
-                </span>
-                <span className="text-sm text-gray-500">Good for coffee chats, 1:1 interviews, etc.</span>
-              </button>
-              <button disabled className="w-full text-left px-4 py-3 hover:bg-gray-50 flex flex-col transition-colors opacity-60 cursor-not-allowed">
-                <span className="font-medium text-blue-600">Group</span>
-                <span className="text-sm text-gray-500 flex items-center gap-1">
-                  1 host <span className="text-gray-400">→</span> Multiple invitees
-                </span>
-                <span className="text-sm text-gray-500">Webinars, online classes, etc.</span>
-              </button>
-              <button disabled className="w-full text-left px-4 py-3 hover:bg-gray-50 flex flex-col transition-colors opacity-60 cursor-not-allowed">
-                <span className="font-medium text-blue-600">Round robin</span>
-                <span className="text-sm text-gray-500 flex items-center gap-1">
-                  Rotating hosts <span className="text-gray-400">→</span> 1 invitee
-                </span>
-                <span className="text-sm text-gray-500">Distribute meetings between team members</span>
-              </button>
-              <button disabled className="w-full text-left px-4 py-3 hover:bg-gray-50 flex flex-col transition-colors opacity-60 cursor-not-allowed">
-                <span className="font-medium text-blue-600">Collective</span>
-                <span className="text-sm text-gray-500 flex items-center gap-1">
-                  Multiple hosts <span className="text-gray-400">→</span> 1 invitee
-                </span>
-                <span className="text-sm text-gray-500">Panel interviews, group sales calls, etc.</span>
-              </button>
-              
-              <div className="border-t border-gray-100 mt-2 pt-2">
-                <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  More ways to meet
-                </div>
-                <button disabled className="w-full text-left px-4 py-3 hover:bg-gray-50 flex flex-col transition-colors opacity-60 cursor-not-allowed">
-                  <span className="font-medium text-blue-600">One-off meeting</span>
-                  <span className="text-sm text-gray-500">Offer time outside your normal schedule</span>
-                </button>
-                <button disabled className="w-full text-left px-4 py-3 hover:bg-gray-50 flex flex-col transition-colors opacity-60 cursor-not-allowed">
-                  <span className="font-medium text-blue-600">Meeting poll</span>
-                  <span className="text-sm text-gray-500">Let invitees vote on a time to meet</span>
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
+        <button 
+          onClick={() => openCreateDrawer(null)}
+          className="flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-full font-medium hover:bg-blue-700 transition-colors shadow-sm"
+        >
+          <Plus size={18} />
+          Create
+        </button>
       </div>
 
       {/* Tabs */}
@@ -163,23 +132,19 @@ export default function SchedulingPage() {
           <button className="border-b-2 border-blue-600 py-4 px-1 text-sm font-medium text-gray-900">
             Event types
           </button>
-          <button disabled className="border-b-2 border-transparent py-4 px-1 text-sm font-medium text-gray-500 hover:text-gray-700 opacity-60 cursor-not-allowed">
-            Single-use links
-          </button>
-          <button disabled className="border-b-2 border-transparent py-4 px-1 text-sm font-medium text-gray-500 hover:text-gray-700 opacity-60 cursor-not-allowed">
-            Meeting polls
-          </button>
         </nav>
       </div>
 
       {/* Search */}
-      <div className="mb-6 relative max-w-md">
+      <div className="mb-6 relative max-w-full sm:max-w-md">
         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
           <Search className="h-4 w-4 text-gray-400" />
         </div>
         <input
           type="text"
           placeholder="Search event types"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
           className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-shadow"
         />
       </div>
@@ -193,13 +158,11 @@ export default function SchedulingPage() {
           <span className="font-medium text-gray-900">Sanchit Pandey</span>
         </div>
         <div className="flex items-center gap-4">
-          <button className="flex items-center gap-1.5 text-blue-600 hover:text-blue-700 text-sm font-medium">
+          {/* View landing page — commented out for future implementation */}
+          {/* <button className="flex items-center gap-1.5 text-blue-600 hover:text-blue-700 text-sm font-medium">
             <ExternalLink size={16} />
             View landing page
-          </button>
-          <button className="text-gray-400 hover:text-gray-600">
-            <MoreVertical size={20} />
-          </button>
+          </button> */}
         </div>
       </div>
 
@@ -210,18 +173,21 @@ export default function SchedulingPage() {
         </div>
       ) : error ? (
         <div className="text-red-500 py-4">{error}</div>
-      ) : events.length === 0 ? (
+      ) : filteredEvents.length === 0 ? (
         <div className="text-center py-12 bg-gray-50 rounded-lg border border-gray-200 border-dashed">
-          <p className="text-gray-500">No event types found. Create one to get started.</p>
+          <p className="text-gray-500">
+            {searchQuery ? 'No event types match your search.' : 'No event types found. Create one to get started.'}
+          </p>
         </div>
       ) : (
         <div className="space-y-4">
-          {events.map(event => (
+          {filteredEvents.map(event => (
             <EventCard 
               key={event.id} 
               event={event} 
+              availability={availability}
               onEdit={openEditDrawer}
-              onDelete={handleDeleteEvent}
+              onDelete={handleDeleteClick}
             />
           ))}
         </div>
@@ -229,10 +195,39 @@ export default function SchedulingPage() {
 
       <CreateEventDrawer 
         isOpen={isCreateDrawerOpen} 
-        onClose={closeCreateDrawer} 
+        onClose={() => { closeCreateDrawer(); setSlugError(''); }}
         onSave={handleSaveEvent}
         initialData={editingEvent}
+        slugError={slugError}
       />
+
+      {/* Delete Event Modal */}
+      {deleteModalOpen && eventToDelete && (
+        <div className="fixed inset-0 backdrop-blur-sm z-50 flex items-start justify-center">
+          <div className="bg-white rounded-[16px] shadow-[0_20px_40px_rgba(0,0,0,0.15)] border border-gray-100 w-full max-w-[460px] p-8 m-4 mt-32">
+            <h2 className="text-[22px] font-bold text-[#1a1a1a] mb-6">Delete {eventToDelete.name}?</h2>
+            
+            <p className="text-[16px] text-[#4d5055] mb-8 leading-relaxed">
+              Users will be unable to schedule further meetings with deleted event types. Meetings previously scheduled will also be deleted.
+            </p>
+
+            <div className="flex items-center gap-4">
+              <button 
+                onClick={closeDeleteModal}
+                className="flex-1 py-3 px-6 border border-[#006bff] rounded-full text-[15px] font-bold text-[#1a1a1a] hover:bg-blue-50 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={confirmDeleteEvent}
+                className="flex-1 py-3 px-6 bg-[#d0401b] hover:bg-[#b03010] text-white rounded-full text-[15px] font-bold transition-colors cursor-pointer"
+              >
+                Yes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

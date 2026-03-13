@@ -5,6 +5,11 @@ import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { ArrowLeft, Clock, Video, Calendar as CalendarIcon, Globe } from 'lucide-react';
 import { createBooking } from '@/services/booking';
 import { getEventBySlug, EventType } from '@/services/events';
+import { getAvailability } from '@/services/availability';
+import { ToastContainer } from '@/components/ui/Toast';
+import { useToast, getErrorMessage } from '@/hooks/useToast';
+import PoweredByRibbon from '@/components/ui/PoweredByRibbon';
+import { formatTimeInTimezone } from '@/utils/timezoneUtils';
 
 export default function BookingFormPage() {
   const router = useRouter();
@@ -15,52 +20,80 @@ export default function BookingFormPage() {
   const dateStr = searchParams.get('date');
   const startTime = searchParams.get('startTime');
   const endTime = searchParams.get('endTime');
+  const tzLabel = searchParams.get('tz') || 'India Standard Time';
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
+  const [formErrors, setFormErrors] = useState<{ name?: string; email?: string }>({});
+  const { toasts, removeToast, showError } = useToast();
 
   const [eventType, setEventType] = useState<EventType | null>(null);
   const [loadingEvent, setLoadingEvent] = useState(true);
+  const [availTzId, setAvailTzId] = useState('Asia/Kolkata');
+
+  const TIMEZONES = [
+    { label: 'India Standard Time', id: 'Asia/Kolkata' },
+    { label: 'Eastern Time - US & Canada', id: 'America/New_York' },
+    { label: 'Central Time - US & Canada', id: 'America/Chicago' },
+    { label: 'Mountain Time - US & Canada', id: 'America/Denver' },
+    { label: 'Pacific Time - US & Canada', id: 'America/Los_Angeles' },
+    { label: 'Greenwich Mean Time', id: 'Europe/London' },
+    { label: 'Central European Time', id: 'Europe/Paris' },
+    { label: 'Australian Eastern Time', id: 'Australia/Sydney' },
+  ];
+
+  const selectedTzId = TIMEZONES.find(t => t.label === tzLabel)?.id || 'Asia/Kolkata';
 
   useEffect(() => {
-    const fetchEvent = async () => {
+    const fetchData = async () => {
       try {
-        const event = await getEventBySlug(eventSlug);
+        const [event, availData] = await Promise.all([
+          getEventBySlug(eventSlug),
+          getAvailability()
+        ]);
         setEventType(event);
+        if (availData.length > 0 && availData[0].timezone) {
+          const foundTz = TIMEZONES.find(t => t.label === availData[0].timezone);
+          setAvailTzId(foundTz?.id || availData[0].timezone);
+        }
       } catch (error) {
-        console.error('Failed to fetch event:', error);
+        console.error('Failed to fetch data:', error);
       } finally {
         setLoadingEvent(false);
       }
     };
     if (eventSlug) {
-      fetchEvent();
+      fetchData();
     }
   }, [eventSlug]);
 
-  // Format date and time for display
+  // Format date and time for display using the selected timezone
   const formatDateTime = () => {
     if (!startTime || !endTime) return '';
     const startDate = new Date(startTime);
-    const endDate = new Date(endTime);
     
-    const formatTime = (d: Date) => {
-      let h = d.getUTCHours();
-      const m = d.getUTCMinutes();
-      const ampm = h >= 12 ? 'pm' : 'am';
-      h = h % 12;
-      h = h ? h : 12;
-      return `${h}:${String(m).padStart(2, '0')}${ampm}`;
-    };
+    const startFormatted = formatTimeInTimezone(startTime, availTzId, selectedTzId);
+    const endFormatted = formatTimeInTimezone(endTime, availTzId, selectedTzId);
 
     const dateFormatted = startDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
-    return `${formatTime(startDate)} - ${formatTime(endDate)}, ${dateFormatted}`;
+    return `${startFormatted} - ${endFormatted}, ${dateFormatted}`;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate
+    const errors: { name?: string; email?: string } = {};
+    if (!name.trim()) errors.name = 'Name is required.';
+    if (!email.trim()) errors.email = 'Email is required.';
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.email = 'Please enter a valid email.';
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      return;
+    }
+    setFormErrors({});
+    
     if (!eventType) return;
     setLoading(true);
     try {
@@ -69,11 +102,17 @@ export default function BookingFormPage() {
         startTime: startTime!,
         endTime: endTime!,
         inviteeName: name,
-        inviteeEmail: email,
-        notes
+        inviteeEmail: email
       });
-      router.push(`/user/${eventSlug}/confirm?date=${dateStr}&startTime=${startTime}&endTime=${endTime}&name=${encodeURIComponent(name)}&email=${encodeURIComponent(email)}`);
-    } catch (error) {
+      router.push(`/user/${eventSlug}/confirm?date=${dateStr}&startTime=${startTime}&endTime=${endTime}&name=${encodeURIComponent(name)}&email=${encodeURIComponent(email)}&tz=${encodeURIComponent(tzLabel)}`);
+    } catch (error: unknown) {
+      const resp = (error as { response?: { status?: number } })?.response;
+      if (resp?.status === 409) {
+        showError('This slot is no longer available. Please select another one.');
+        setTimeout(() => router.push(`/user/${eventSlug}`), 2000);
+      } else {
+        showError(getErrorMessage(error, 'Booking failed. Please try again.'));
+      }
       console.error('Booking failed:', error);
     } finally {
       setLoading(false);
@@ -81,16 +120,12 @@ export default function BookingFormPage() {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-[0_1px_8px_rgba(0,0,0,0.08)] border border-gray-200 flex flex-col md:flex-row max-w-[1060px] w-full relative overflow-hidden min-h-[600px]">
-      {/* Ribbon */}
-      <div className="absolute top-0 right-0 w-32 h-32 overflow-hidden z-10 pointer-events-none">
-        <div className="bg-gray-600 text-white text-[10px] font-bold py-1.5 px-10 transform rotate-45 translate-x-[34px] translate-y-[22px] text-center tracking-wider uppercase">
-          Powered by<br/>Calendly
-        </div>
-      </div>
+    <div className="bg-white rounded-lg shadow-[0_1px_8px_rgba(0,0,0,0.08)] border border-gray-200 flex flex-col md:flex-row max-w-[1060px] w-full relative overflow-hidden min-h-[500px] md:min-h-[600px]">
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
+      <PoweredByRibbon />
 
       {/* Left Panel */}
-      <div className="w-full md:w-[380px] p-8 border-r border-gray-200 flex flex-col">
+      <div className="w-full md:w-[380px] p-4 sm:p-8 border-b md:border-b-0 md:border-r border-gray-200 flex flex-col">
         <button onClick={() => router.back()} className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center text-[#006bff] hover:bg-blue-50 transition-colors mb-6">
           <ArrowLeft size={20} />
         </button>
@@ -111,13 +146,10 @@ export default function BookingFormPage() {
         </div>
         <div className="flex items-center gap-3 text-gray-600 font-medium">
           <Globe size={20} />
-          <span>India Standard Time</span>
+          <span>{tzLabel}</span>
         </div>
 
-        <div className="mt-auto pt-8 flex gap-4 text-[14px] text-[#006bff]">
-          <a href="#" className="hover:underline">Cookie settings</a>
-          <a href="#" className="hover:underline">Privacy Policy</a>
-        </div>
+
       </div>
 
       {/* Right Panel */}
@@ -132,8 +164,9 @@ export default function BookingFormPage() {
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-[#006bff] focus:ring-1 focus:ring-[#006bff]"
+              className={`w-full px-3 py-2.5 border rounded-lg focus:outline-none focus:border-[#006bff] focus:ring-1 focus:ring-[#006bff] ${formErrors.name ? 'border-red-400' : 'border-gray-300'}`}
             />
+            {formErrors.name && <p className="text-[13px] text-red-500 mt-1">{formErrors.name}</p>}
           </div>
           
           <div className="mb-4">
@@ -143,27 +176,9 @@ export default function BookingFormPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-[#006bff] focus:ring-1 focus:ring-[#006bff]"
+              className={`w-full px-3 py-2.5 border rounded-lg focus:outline-none focus:border-[#006bff] focus:ring-1 focus:ring-[#006bff] ${formErrors.email ? 'border-red-400' : 'border-gray-300'}`}
             />
-          </div>
-
-          <button type="button" className="text-[#006bff] font-medium text-[14px] border border-[#006bff] rounded-full px-4 py-1.5 hover:bg-blue-50 transition-colors mb-6">
-            Add Guests
-          </button>
-
-          <div className="mb-6">
-            <label className="block text-[14px] font-bold text-gray-900 mb-2">Please share anything that will help prepare for our meeting.</label>
-            <textarea 
-              rows={3}
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-[#006bff] focus:ring-1 focus:ring-[#006bff] resize-y"
-            ></textarea>
-          </div>
-
-          <div className="text-[12px] text-gray-600 mb-6 leading-relaxed">
-            By proceeding, you confirm that you have read and agree to <br/>
-            <a href="#" className="text-[#006bff] hover:underline font-medium">Calendly's Terms of Use</a> and <a href="#" className="text-[#006bff] hover:underline font-medium">Privacy Notice</a>.
+            {formErrors.email && <p className="text-[13px] text-red-500 mt-1">{formErrors.email}</p>}
           </div>
 
           <button 

@@ -18,9 +18,17 @@ export const getEvent = async (id: string): Promise<EventType> => {
   return response.data;
 };
 
-export const getEventBySlug = async (slug: string): Promise<EventType> => {
-  const response = await api.get(`/event-types/slug/${slug}`);
-  return response.data;
+export const getEventBySlug = async (slug: string): Promise<EventType | null> => {
+  try {
+    const response = await api.get(`/event-types/slug/${slug}`);
+    return response.data;
+  } catch (error: unknown) {
+    const resp = (error as { response?: { status?: number } })?.response;
+    if (resp?.status === 404) {
+      return null;
+    }
+    throw error;
+  }
 };
 
 export const createEvent = async (data: Omit<EventType, 'id'>): Promise<EventType> => {
